@@ -12,6 +12,7 @@ from app.application.orchestrator import OnboardingOrchestrator
 from app.infrastructure.api import create_router
 from app.infrastructure.mock_tools import MockDocumentation, MockIdentityVerifier, MockRiskLists
 from app.infrastructure.sqlite_repository import SQLiteStateRepository
+from app.infrastructure.web import create_web_router
 
 logging.basicConfig(format="%(asctime)s %(name)s %(message)s")
 logging.getLogger("onboarding").setLevel(logging.INFO)  # trazabilidad por paso
@@ -44,4 +45,5 @@ def build_app(api_key=None, db_path=None, identity=None, risk_lists=None,
     )
     app = FastAPI(title="Onboarding Digital - Agente Orquestador")
     app.include_router(create_router(orchestrator, api_key))
+    app.include_router(create_web_router())
     return app

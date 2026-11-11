@@ -40,6 +40,8 @@ def to_response(state: OnboardingState) -> dict:
     return {
         "onboarding_id": state.id,
         "created_at": state.created_at,
+        "prospect": {"name": state.prospect.name, "document_id": state.prospect.document_id,
+                     "product": state.prospect.product},
         "status": state.decision.value,
         "apto": _APTO[state.decision],
         "message": state.message,

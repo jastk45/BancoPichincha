@@ -130,6 +130,17 @@ class OnboardingTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             Prospect("Juan Perez", "1712345678", "cuenta_ahorros")
 
+    def test_respuesta_incluye_datos_del_prospecto(self):
+        body = self.start()
+        self.assertEqual(body["prospect"], {"name": "Juan Perez", "document_id": "1712345675",
+                                            "product": "cuenta_ahorros"})
+
+    def test_frontend_se_sirve_sin_api_key(self):
+        res = TestClient(build_app(api_key=API_KEY, db_path=self.db_path)).get("/")
+        self.assertEqual(res.status_code, 200)
+        self.assertIn("text/html", res.headers["content-type"])
+        self.assertIn("Onboarding digital", res.text)
+
     # --- Seguridad --------------------------------------------------------
     def test_sin_api_key_o_incorrecta_retorna_401(self):
         app = build_app(api_key=API_KEY, db_path=self.db_path)

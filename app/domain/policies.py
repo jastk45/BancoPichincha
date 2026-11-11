@@ -28,7 +28,7 @@ def evaluate_risk(risk_level: str, matches: list) -> Evaluation:
     if risk_level == "high":
         return (
             StepStatus.ESCALAR,
-            f"Riesgo alto en listas restrictivas: {matches}.",
+            f"Riesgo alto en listas restrictivas: {', '.join(matches) or 'sin detalle'}.",
             "Escalar al Oficial de Cumplimiento para revisión manual antes de vincular.",
         )
     if risk_level not in ("low", "medium"):

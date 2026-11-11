@@ -86,7 +86,8 @@ class ResponseAgent:
         first_name = state.prospect.name.split()[0]
         product = state.prospect.product.replace("_", " ")
         if state.decision is Decision.APROBADO:
-            docs = ", ".join(state.context["documentation"]["required_documents"])
+            docs = ", ".join(d.replace("_", " ")
+                             for d in state.context["documentation"]["required_documents"])
             return (f"Hola {first_name}, tu solicitud de {product} fue aprobada. "
                     f"Para finalizar, por favor carga: {docs}.")
         if state.decision is Decision.ESCALADO:

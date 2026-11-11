@@ -1,0 +1,478 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Onboarding digital</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@700;800&family=Instrument+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --paper: #EEF2EF;
+    --sheet: #FBFCFA;
+    --ink: #17263A;
+    --muted: #586874;
+    --rule: #CBD5D1;
+    --pen: #2647A0;
+    --ok: #1E6B48;
+    --no: #A3302A;
+    --hold: #8F6200;
+    --ui: "Instrument Sans", system-ui, sans-serif;
+    --stamp: "Big Shoulders Display", "Arial Narrow", sans-serif;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--paper); color: var(--ink);
+    font: 400 16px/1.5 var(--ui); font-variant-numeric: tabular-nums;
+  }
+  :focus-visible { outline: 2px solid var(--pen); outline-offset: 2px; }
+  button, input, select { font: inherit; color: inherit; }
+
+  .top {
+    display: flex; flex-wrap: wrap; gap: 12px 24px; align-items: end; justify-content: space-between;
+    max-width: 1200px; margin: 0 auto; padding: 32px 24px 20px;
+  }
+  .top h1 { margin: 0; font-size: 28px; line-height: 1.15; font-weight: 700; letter-spacing: -0.01em; }
+  .top p { margin: 4px 0 0; color: var(--muted); max-width: 52ch; }
+  .key { display: flex; gap: 8px; align-items: center; }
+  .key label { font-size: 14px; color: var(--muted); }
+  .key input { width: 180px; }
+  .key-state { font-size: 14px; color: var(--ok); }
+
+  main {
+    display: grid; grid-template-columns: minmax(300px, 380px) 1fr; gap: 24px; align-items: start;
+    max-width: 1200px; margin: 0 auto; padding: 0 24px 48px;
+  }
+  @media (max-width: 860px) { main { grid-template-columns: 1fr; } }
+
+  .panel { background: var(--sheet); border: 1px solid var(--rule); border-radius: 6px; padding: 24px; }
+  .panel + .panel { margin-top: 16px; }
+  h2 { margin: 0 0 16px; font-size: 18px; font-weight: 600; }
+  h3 { margin: 0 0 8px; font-size: 15px; font-weight: 600; }
+
+  .field { margin-bottom: 16px; }
+  .field label { display: block; font-size: 14px; font-weight: 500; margin-bottom: 4px; }
+  input, select {
+    width: 100%; padding: 9px 11px; background: #fff;
+    border: 1px solid var(--rule); border-radius: 4px;
+  }
+  input:focus, select:focus { border-color: var(--pen); }
+  .field[data-invalid] input { border-color: var(--no); }
+  .error { margin: 4px 0 0; font-size: 14px; color: var(--no); }
+  .error:empty { display: none; }
+
+  .primary {
+    width: 100%; padding: 11px 16px; border: 0; border-radius: 4px; cursor: pointer;
+    background: var(--pen); color: #fff; font-weight: 600;
+  }
+  .primary:hover { background: #1D3A85; }
+  .primary[disabled] { opacity: .6; cursor: progress; }
+  .quiet {
+    padding: 9px 14px; border: 1px solid var(--rule); border-radius: 4px; background: #fff; cursor: pointer;
+  }
+  .quiet:hover { border-color: var(--pen); color: var(--pen); }
+
+  .cases { list-style: none; margin: 0; padding: 0; }
+  .cases button {
+    display: flex; justify-content: space-between; gap: 12px; width: 100%; text-align: left;
+    padding: 9px 0; border: 0; border-bottom: 1px solid var(--rule); background: none; cursor: pointer;
+  }
+  .cases li:last-child button { border-bottom: 0; }
+  .cases button:hover .case-name { color: var(--pen); text-decoration: underline; }
+  .case-name { font-weight: 500; }
+  .case-expect { color: var(--muted); font-size: 14px; white-space: nowrap; }
+
+  .lookup { display: flex; gap: 8px; }
+  .history { list-style: none; margin: 12px 0 0; padding: 0; font-size: 14px; }
+  .history button { background: none; border: 0; padding: 4px 0; cursor: pointer; color: var(--pen); text-align: left; }
+
+  /* Expediente */
+  .file { min-height: 520px; position: relative; }
+  .empty { color: var(--muted); max-width: 46ch; margin-top: 120px; }
+  .file-head { display: flex; justify-content: space-between; gap: 24px; align-items: start; flex-wrap: wrap; }
+  .file-meta { color: var(--muted); font-size: 14px; margin: 0; }
+  .file-meta strong { color: var(--ink); font-weight: 600; }
+
+  .stamp {
+    --c: var(--ok);
+    display: inline-block; padding: 6px 18px 4px; color: var(--c);
+    border: 4px double var(--c); border-radius: 6px; transform: rotate(-5deg);
+    font: 800 46px/1 var(--stamp); letter-spacing: .04em; text-transform: uppercase;
+    mix-blend-mode: multiply; opacity: .92;
+  }
+  .stamp small { display: block; font: 600 13px/1.4 var(--ui); letter-spacing: 0; text-transform: none; text-align: center; }
+  .stamp[data-status="RECHAZADO"] { --c: var(--no); }
+  .stamp[data-status="ESCALADO"] { --c: var(--hold); }
+  .stamp.land { animation: land .42s cubic-bezier(.2,.9,.3,1.2); }
+  @keyframes land {
+    from { transform: rotate(-12deg) scale(1.6); opacity: 0; }
+    to { transform: rotate(-5deg) scale(1); opacity: .92; }
+  }
+  @media (prefers-reduced-motion: reduce) { .stamp.land { animation: none; } }
+
+  .message {
+    margin: 24px 0; padding: 4px 0 4px 16px; border-left: 3px solid var(--rule);
+    font-size: 18px; line-height: 1.55; max-width: 64ch;
+  }
+  .solution { margin: 0 0 24px; padding: 14px 16px; border-radius: 4px; background: #F6EFDD; max-width: 70ch; }
+  .solution[data-status="RECHAZADO"] { background: #F6E3E1; }
+  .solution p { margin: 0; }
+
+  .docs { list-style: none; margin: 0 0 28px; padding: 0; columns: 2 220px; }
+  .docs li { padding: 3px 0 3px 26px; position: relative; break-inside: avoid; }
+  .docs li::before {
+    content: ""; position: absolute; left: 0; top: 7px; width: 14px; height: 14px;
+    border: 1.5px solid var(--muted); border-radius: 2px;
+  }
+
+  .steps { list-style: none; margin: 0; padding: 0; counter-reset: step; }
+  .step {
+    display: grid; grid-template-columns: 32px 1fr; gap: 0 14px;
+    padding: 14px 0; border-top: 1px solid var(--rule);
+  }
+  .step::before {
+    counter-increment: step; content: counter(step);
+    width: 28px; height: 28px; border-radius: 50%; display: grid; place-items: center;
+    font-weight: 600; font-size: 14px; border: 1.5px solid currentColor;
+  }
+  .step[data-status="ok"]::before { color: var(--ok); }
+  .step[data-status="rechazar"]::before { color: var(--no); }
+  .step[data-status="escalar"]::before { color: var(--hold); }
+  .step[data-status="skipped"] { color: var(--muted); }
+  .step-title { display: flex; flex-wrap: wrap; gap: 4px 12px; align-items: baseline; }
+  .step-title strong { font-weight: 600; }
+  .tool { font-size: 13px; color: var(--muted); }
+  .verdict { font-size: 14px; font-weight: 600; }
+  .step[data-status="ok"] .verdict { color: var(--ok); }
+  .step[data-status="rechazar"] .verdict { color: var(--no); }
+  .step[data-status="escalar"] .verdict { color: var(--hold); }
+  .step-body { grid-column: 2; font-size: 15px; }
+  .step-body p { margin: 4px 0 0; }
+
+  .meter { position: relative; height: 8px; margin: 10px 0 18px; max-width: 320px; background: var(--rule); border-radius: 4px; }
+  .meter span { position: absolute; inset: 0 auto 0 0; border-radius: 4px; background: var(--c, var(--ok)); }
+  .meter i {
+    position: absolute; top: -4px; bottom: -4px; width: 2px; background: var(--ink);
+  }
+  .meter i::after {
+    content: "Umbral 0.80"; position: absolute; top: 18px; left: -30px; width: 80px;
+    font-style: normal; font-size: 12px; color: var(--muted);
+  }
+
+  details { margin-top: 24px; }
+  summary { cursor: pointer; color: var(--pen); font-size: 14px; }
+  pre { overflow: auto; font-size: 12.5px; background: #fff; border: 1px solid var(--rule); border-radius: 4px; padding: 12px; }
+  .banner { margin: 0 0 16px; padding: 12px 14px; border-radius: 4px; background: #F6E3E1; color: var(--no); }
+  .banner:empty { display: none; }
+  .visually-hidden { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
+</style>
+</head>
+<body>
+<header class="top">
+  <div>
+    <h1>Onboarding digital</h1>
+    <p>El orquestador verifica la identidad, consulta listas de riesgo y prepara la documentación antes de decidir.</p>
+  </div>
+  <form class="key" id="key-form">
+    <label for="api-key">Clave de acceso</label>
+    <input id="api-key" type="password" autocomplete="off" placeholder="X-API-Key">
+    <button class="quiet" type="submit">Guardar</button>
+    <span class="key-state" id="key-state" aria-live="polite"></span>
+  </form>
+</header>
+
+<main>
+  <div>
+    <section class="panel" aria-labelledby="t-form">
+      <h2 id="t-form">Nueva solicitud</h2>
+      <form id="onboarding-form" novalidate>
+        <div class="field" id="f-prospect_name">
+          <label for="prospect_name">Nombre completo</label>
+          <input id="prospect_name" name="prospect_name" value="Juan Perez" autocomplete="name">
+          <p class="error" id="e-prospect_name"></p>
+        </div>
+        <div class="field" id="f-document_id">
+          <label for="document_id">Cédula</label>
+          <input id="document_id" name="document_id" value="1712345675" inputmode="numeric" maxlength="10">
+          <p class="error" id="e-document_id"></p>
+        </div>
+        <div class="field" id="f-product">
+          <label for="product">Producto</label>
+          <select id="product" name="product">
+            <option value="cuenta_ahorros">Cuenta de ahorros</option>
+            <option value="cuenta_corriente">Cuenta corriente</option>
+            <option value="tarjeta_credito">Tarjeta de crédito</option>
+            <option value="hipoteca">Hipoteca (fuera de catálogo)</option>
+          </select>
+          <p class="error" id="e-product"></p>
+        </div>
+        <button class="primary" id="submit" type="submit">Iniciar onboarding</button>
+      </form>
+    </section>
+
+    <section class="panel" aria-labelledby="t-cases">
+      <h2 id="t-cases">Casos de prueba</h2>
+      <ul class="cases" id="cases"></ul>
+    </section>
+
+    <section class="panel" aria-labelledby="t-lookup">
+      <h2 id="t-lookup">Abrir un expediente</h2>
+      <form class="lookup" id="lookup-form">
+        <label class="visually-hidden" for="lookup-id">Número de expediente</label>
+        <input id="lookup-id" placeholder="Número de expediente" autocomplete="off">
+        <button class="quiet" type="submit">Abrir</button>
+      </form>
+      <ul class="history" id="history" aria-label="Expedientes de esta sesión"></ul>
+    </section>
+  </div>
+
+  <section class="panel file" aria-labelledby="t-file" aria-live="polite">
+    <h2 id="t-file" class="visually-hidden">Expediente</h2>
+    <p class="banner" id="banner" role="alert"></p>
+    <p class="empty" id="empty">Envía una solicitud o elige un caso de prueba para ver cómo decide el orquestador.</p>
+    <div id="result" hidden>
+      <div class="file-head">
+        <p class="file-meta">
+          Expediente <strong id="r-id"></strong><br>
+          <span id="r-who"></span><br>
+          <span id="r-date"></span>
+        </p>
+        <div class="stamp" id="r-stamp"></div>
+      </div>
+      <blockquote class="message" id="r-message"></blockquote>
+      <div class="solution" id="r-solution" hidden>
+        <h3>Siguiente paso para el banco</h3>
+        <p id="r-solution-text"></p>
+      </div>
+      <div id="r-docs-wrap" hidden>
+        <h3>Documentos para completar la apertura</h3>
+        <ul class="docs" id="r-docs"></ul>
+      </div>
+      <h3>Recorrido del orquestador</h3>
+      <ol class="steps" id="r-steps"></ol>
+      <details>
+        <summary>Ver respuesta JSON</summary>
+        <pre id="r-json"></pre>
+      </details>
+    </div>
+  </section>
+</main>
+
+<script>
+const API = "/api/v1/onboarding";
+const $ = (id) => document.getElementById(id);
+
+const CASES = [
+  { name: "Cliente sin observaciones", doc: "1712345675", product: "cuenta_ahorros", expect: "Aprobado" },
+  { name: "Persona expuesta políticamente", doc: "1733333338", product: "cuenta_corriente", expect: "Aprobado" },
+  { name: "Identidad no verificada", doc: "1700000001", product: "cuenta_ahorros", expect: "Rechazado" },
+  { name: "Producto fuera de catálogo", doc: "1712345675", product: "hipoteca", expect: "Rechazado" },
+  { name: "Confianza de identidad baja", doc: "1711111110", product: "cuenta_ahorros", expect: "En revisión" },
+  { name: "Coincidencia en lista OFAC", doc: "1722222229", product: "tarjeta_credito", expect: "En revisión" },
+  { name: "Cédula con dígito verificador inválido", doc: "1712345678", product: "cuenta_ahorros", expect: "Datos inválidos" },
+];
+
+const PLAN = [
+  { agent: "identity", title: "Identidad", tool: "verify_identity" },
+  { agent: "risk", title: "Listas de riesgo", tool: "check_risk_lists" },
+  { agent: "documentation", title: "Documentación", tool: "prepare_documentation" },
+];
+
+const STAMP = { APROBADO: ["Aprobado", "Cliente apto"], RECHAZADO: ["Rechazado", "Cliente no apto"], ESCALADO: ["En revisión", "Decide un analista"] };
+const VERDICT = { ok: "Aprobado", rechazar: "Rechazado", escalar: "Escalado" };
+const RISK = { low: "Bajo", medium: "Medio", high: "Alto" };
+const PRODUCTS = { cuenta_ahorros: "Cuenta de ahorros", cuenta_corriente: "Cuenta corriente", tarjeta_credito: "Tarjeta de crédito" };
+
+const store = {
+  get(k) { try { return sessionStorage.getItem(k); } catch { return null; } },
+  set(k, v) { try { sessionStorage.setItem(k, v); } catch {} },
+};
+let apiKey = store.get("apiKey") || "";
+const history = [];
+
+function el(tag, props = {}, ...children) {
+  const node = Object.assign(document.createElement(tag), props);
+  for (const c of children) if (c != null) node.append(c);
+  return node;
+}
+const human = (s) => s.charAt(0).toUpperCase() + s.slice(1).replaceAll("_", " ");
+
+function showKeyState() { $("key-state").textContent = apiKey ? "Clave guardada" : ""; }
+
+async function call(method, path, body) {
+  const res = await fetch(path, {
+    method,
+    headers: { "Content-Type": "application/json", "X-API-Key": apiKey },
+    body: body ? JSON.stringify(body) : undefined,
+  });
+  let data = null;
+  try { data = await res.json(); } catch {}
+  return { status: res.status, data };
+}
+
+function clearErrors() {
+  $("banner").textContent = "";
+  for (const f of ["prospect_name", "document_id", "product"]) {
+    $("e-" + f).textContent = "";
+    $("f-" + f).removeAttribute("data-invalid");
+  }
+}
+
+function handleFailure(status, data) {
+  if (status === 401) {
+    $("banner").textContent = "La clave de acceso no es válida. Pégala arriba, en Clave de acceso, y vuelve a intentar.";
+    $("api-key").focus();
+  } else if (status === 422 && Array.isArray(data?.detail)) {
+    for (const d of data.detail) {
+      const field = d.loc?.[1];
+      if (!$("e-" + field)) continue;
+      $("e-" + field).textContent = d.msg.replace(/^Value error, /, "");
+      $("f-" + field).setAttribute("data-invalid", "");
+    }
+  } else if (status === 404) {
+    $("banner").textContent = "No existe un expediente con ese número. Revisa que esté completo.";
+  } else {
+    $("banner").textContent = `El servidor respondió con error ${status}. Revisa que la API esté levantada.`;
+  }
+}
+
+function stepBody(agent, output) {
+  const body = el("div", { className: "step-body" });
+  if (output?.error) { body.append(el("p", { textContent: `Error técnico: ${output.error}` })); return body; }
+  if (agent === "identity") {
+    const conf = Number(output.confidence);
+    body.append(el("p", { textContent: `${output.verified ? "Documento verificado" : "Documento no verificado"}, confianza ${conf.toFixed(2)}` }));
+    const meter = el("div", { className: "meter", role: "img", ariaLabel: `Confianza ${conf.toFixed(2)} sobre un umbral de 0.80` });
+    const bar = el("span");
+    bar.style.width = `${Math.round(conf * 100)}%`;
+    if (!output.verified) bar.style.setProperty("--c", "var(--no)");
+    else if (conf < 0.8) bar.style.setProperty("--c", "var(--hold)");
+    const tick = el("i");
+    tick.style.left = "80%";
+    meter.append(bar, tick);
+    body.append(meter);
+  } else if (agent === "risk") {
+    const matches = output.matches?.length ? output.matches.join(", ") : "ninguna";
+    body.append(el("p", { textContent: `Riesgo ${(RISK[output.risk_level] || output.risk_level).toLowerCase()}. Coincidencias: ${matches}` }));
+  } else if (agent === "documentation") {
+    const n = output.required_documents?.length || 0;
+    body.append(el("p", { textContent: n ? `${n} documentos requeridos para ${PRODUCTS[output.product] || output.product}` : "Sin documentos: el producto no existe en el catálogo" }));
+  }
+  return body;
+}
+
+function render(data) {
+  $("empty").hidden = true;
+  $("result").hidden = false;
+
+  $("r-id").textContent = data.onboarding_id;
+  const p = data.prospect;
+  $("r-who").textContent = `${p.name}, cédula ${p.document_id}. ${PRODUCTS[p.product] || human(p.product)}`;
+  $("r-date").textContent = new Date(data.created_at).toLocaleString("es-EC", { dateStyle: "long", timeStyle: "short" });
+
+  const stamp = $("r-stamp");
+  const [word, sub] = STAMP[data.status];
+  stamp.dataset.status = data.status;
+  stamp.replaceChildren(word, el("small", { textContent: sub }));
+  stamp.classList.remove("land"); void stamp.offsetWidth; stamp.classList.add("land");
+
+  $("r-message").textContent = data.message;
+
+  const sol = $("r-solution");
+  sol.hidden = !data.proposed_solution;
+  sol.dataset.status = data.status;
+  $("r-solution-text").textContent = data.proposed_solution || "";
+
+  $("r-docs-wrap").hidden = !data.required_documents.length;
+  $("r-docs").replaceChildren(...data.required_documents.map((d) => el("li", { textContent: human(d) })));
+
+  const byAgent = Object.fromEntries(data.trace.map((s) => [s.agent, s]));
+  $("r-steps").replaceChildren(...PLAN.map((p) => {
+    const s = byAgent[p.agent];
+    const li = el("li", { className: "step" });
+    li.dataset.status = s ? s.status : "skipped";
+    const title = el("div", { className: "step-title" },
+      el("strong", { textContent: p.title }),
+      el("span", { className: "tool", textContent: p.tool }),
+      el("span", { className: "verdict", textContent: s ? VERDICT[s.status] : "No se ejecutó" }));
+    li.append(title);
+    if (s) {
+      li.append(stepBody(p.agent, s.output));
+      if (s.reason) li.lastChild.append(el("p", { textContent: s.reason }));
+    } else {
+      li.append(el("div", { className: "step-body" }, el("p", { textContent: "El orquestador se detuvo en un paso anterior." })));
+    }
+    return li;
+  }));
+
+  $("r-json").textContent = JSON.stringify(data, null, 2);
+}
+
+function remember(data) {
+  if (history.some((h) => h.id === data.onboarding_id)) return;
+  history.unshift({ id: data.onboarding_id, label: `${STAMP[data.status][0]}: ${data.onboarding_id.slice(0, 8)}` });
+  $("history").replaceChildren(...history.slice(0, 6).map((h) =>
+    el("li", {}, el("button", { type: "button", textContent: h.label, onclick: () => openFile(h.id) }))));
+}
+
+async function start(payload) {
+  clearErrors();
+  if (!apiKey) {
+    $("banner").textContent = "Pega la clave de acceso arriba, en Clave de acceso, para enviar solicitudes.";
+    $("api-key").focus();
+    return;
+  }
+  const btn = $("submit");
+  btn.disabled = true; btn.textContent = "Consultando agentes…";
+  try {
+    const { status, data } = await call("POST", `${API}/start`, payload);
+    if (status === 200) { render(data); remember(data); }
+    else handleFailure(status, data);
+  } catch {
+    $("banner").textContent = "No se pudo conectar con la API. Revisa que el servidor esté levantado.";
+  } finally {
+    btn.disabled = false; btn.textContent = "Iniciar onboarding";
+  }
+}
+
+async function openFile(id) {
+  clearErrors();
+  const { status, data } = await call("GET", `${API}/${encodeURIComponent(id)}`);
+  if (status === 200) render(data); else handleFailure(status, data);
+}
+
+$("onboarding-form").addEventListener("submit", (e) => {
+  e.preventDefault();
+  start(Object.fromEntries(new FormData(e.target)));
+});
+
+$("key-form").addEventListener("submit", (e) => {
+  e.preventDefault();
+  apiKey = $("api-key").value.trim();
+  store.set("apiKey", apiKey);
+  $("api-key").value = "";
+  showKeyState();
+  clearErrors();
+});
+
+$("lookup-form").addEventListener("submit", (e) => {
+  e.preventDefault();
+  const id = $("lookup-id").value.trim();
+  if (id) openFile(id);
+});
+
+$("cases").replaceChildren(...CASES.map((c) => el("li", {}, el("button", {
+  type: "button",
+  onclick: () => {
+    $("document_id").value = c.doc;
+    $("product").value = c.product;
+    if (!$("prospect_name").value.trim()) $("prospect_name").value = "Juan Perez";
+    start({ prospect_name: $("prospect_name").value, document_id: c.doc, product: c.product });
+  },
+}, el("span", { className: "case-name", textContent: c.name }), el("span", { className: "case-expect", textContent: c.expect })))));
+
+showKeyState();
+</script>
+</body>
+</html>
