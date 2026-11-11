@@ -71,15 +71,20 @@ app/
   infrastructure/
     api.py           # adaptador HTTP (FastAPI) + autenticación por API key
     mock_tools.py    # mocks de las 3 tools
-    sqlite_repository.py  # persistencia del estado (sqlite3 de la stdlib)
+    sqlite_repository.py    # estado en SQLite (local y tests)
+    postgres_repository.py  # estado en Postgres/Neon (producción)
+    serialization.py        # estado <-> JSON, compartido por ambos repositorios
   main.py            # composition root (inyección de dependencias, config por entorno)
-tests/test_onboarding.py
+  server.py          # entrypoint para Vercel (instancia `app`)
+tests/
+  test_onboarding.py
+  test_postgres_repository.py  # integración con Neon (opcional)
 ```
 
 ### Decisiones de diseño
 
 - **Control de herramientas:** cada sub-agente recibe por constructor solo el puerto de su tool. `IdentityAgent` no puede consultar listas, `RiskAgent` no puede generar documentos, etc.
-- **Estado entre pasos:** `OnboardingState.context` guarda la salida de cada agente; `DocumentationAgent` usa el `risk_level` del paso anterior para aplicar la debida diligencia reforzada. El estado se persiste en SQLite (sobrevive reinicios) y se consulta con `GET /api/v1/onboarding/{id}`.
+- **Estado entre pasos:** `OnboardingState.context` guarda la salida de cada agente; `DocumentationAgent` usa el `risk_level` del paso anterior para aplicar la debida diligencia reforzada. El estado se persiste (Neon/Postgres en producción, SQLite en local) y se consulta con `GET /api/v1/onboarding/{id}`.
 - **Incertidumbre:** el orquestador corta el flujo en el primer paso no-OK. La confianza baja, el riesgo alto o cualquier excepción de una tool escalan a revisión humana; nunca se aprueba por defecto. Cada caso trae una `proposed_solution`.
 - **Respuesta al cliente:** `ResponseAgent` no revela al cliente coincidencias en listas restrictivas; ese detalle queda solo en el `trace` interno.
 - **Seguridad:** todos los endpoints exigen el header `X-API-Key`; la clave se compara en tiempo constante. La app no arranca si `ONBOARDING_API_KEY` no está definida, para que nunca quede abierta por error.
@@ -104,6 +109,24 @@ curl -X POST http://127.0.0.1:8000/api/v1/onboarding/start \
   -H "X-API-Key: <tu-clave>" \
   -H "Content-Type: application/json" \
   -d '{"prospect_name": "Juan Perez", "document_id": "1712345675", "product": "cuenta_ahorros"}'
+```
+
+## Despliegue: Vercel + Neon
+
+- **Vercel** ejecuta la API como función serverless. Detecta la app por `[tool.vercel] entrypoint = "app.server:app"` en `pyproject.toml` y despliega en cada push a `main`.
+- **Neon** guarda el estado en Postgres. Si existe `DATABASE_URL` (o `POSTGRES_URL`), la app usa Postgres; si no, SQLite.
+
+Pasos (una sola vez):
+
+1. En Vercel: **Add New → Project → Import** el repo `BancoPichincha`. No hace falta cambiar la configuración de build.
+2. En el proyecto: **Storage → Neon → Connect**. Vercel inyecta `DATABASE_URL` automáticamente.
+3. En **Settings → Environment Variables** agrega `ONBOARDING_API_KEY` con una clave segura (`python -c "import secrets; print(secrets.token_urlsafe(24))"`).
+4. **Redeploy**. La tabla `onboarding` se crea sola en el primer arranque.
+
+Probar el adaptador contra Neon desde local:
+
+```bash
+TEST_DATABASE_URL="postgresql://..." uv run python -m unittest tests.test_postgres_repository -v
 ```
 
 ## Escenarios simulados
@@ -143,6 +166,6 @@ Productos válidos: `cuenta_ahorros`, `cuenta_corriente`, `tarjeta_credito`.
 ## Siguientes pasos (fuera del MVP)
 
 - Reemplazar los mocks por clientes reales (registro civil, listas OFAC/ONU, gestor documental): solo hay que agregar nuevos adaptadores de los puertos.
-- Migrar de SQLite a Postgres (p. ej. Neon) con otro adaptador de `StateRepositoryPort`, y agregar un endpoint para que el analista resuelva los casos escalados.
+- Agregar un endpoint para que el analista resuelva los casos escalados.
 - Reemplazar la API key por OAuth2/JWT con roles (canal digital vs. analista).
 - Si se requiere razonamiento en lenguaje natural, cambiar `ResponseAgent` o el orquestador por un LLM con tool-use, sin tocar las políticas ni los puertos.

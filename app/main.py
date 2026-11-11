@@ -17,13 +17,22 @@ logging.basicConfig(format="%(asctime)s %(name)s %(message)s")
 logging.getLogger("onboarding").setLevel(logging.INFO)  # trazabilidad por paso
 
 
+def _build_repository(db_path: str | None):
+    """Neon/Postgres si hay DATABASE_URL (Vercel la inyecta); si no, SQLite local."""
+    if db_path is None:
+        database_url = os.environ.get("DATABASE_URL") or os.environ.get("POSTGRES_URL")
+        if database_url:
+            from app.infrastructure.postgres_repository import PostgresStateRepository
+            return PostgresStateRepository(database_url)
+        db_path = os.environ.get("ONBOARDING_DB_PATH", "onboarding.db")
+    return SQLiteStateRepository(db_path)
+
+
 def build_app(api_key=None, db_path=None, identity=None, risk_lists=None,
               documentation=None) -> FastAPI:
     api_key = api_key or os.environ.get("ONBOARDING_API_KEY")
     if not api_key:
         raise RuntimeError("Falta ONBOARDING_API_KEY (ver .env.example).")
-    db_path = db_path or os.environ.get("ONBOARDING_DB_PATH", "onboarding.db")
-
     orchestrator = OnboardingOrchestrator(
         agents=[
             IdentityAgent(identity or MockIdentityVerifier()),
@@ -31,7 +40,7 @@ def build_app(api_key=None, db_path=None, identity=None, risk_lists=None,
             DocumentationAgent(documentation or MockDocumentation()),
         ],
         responder=ResponseAgent(),
-        repository=SQLiteStateRepository(db_path),
+        repository=_build_repository(db_path),
     )
     app = FastAPI(title="Onboarding Digital - Agente Orquestador")
     app.include_router(create_router(orchestrator, api_key))

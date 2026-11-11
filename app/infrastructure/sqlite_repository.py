@@ -1,13 +1,10 @@
-"""Persistencia del estado en SQLite (stdlib). Sobrevive reinicios del servidor.
-
-Para Postgres (p. ej. Neon) basta otro adaptador con la misma interfaz save/get.
-"""
+"""Persistencia del estado en SQLite (stdlib). Para desarrollo local y tests."""
 import json
 import sqlite3
 from contextlib import closing
-from dataclasses import asdict
 
-from app.domain.models import Decision, OnboardingState, Prospect, StepResult, StepStatus
+from app.domain.models import OnboardingState
+from app.infrastructure.serialization import state_from_dict, state_to_json
 
 
 class SQLiteStateRepository:
@@ -21,26 +18,13 @@ class SQLiteStateRepository:
             )
 
     def save(self, state: OnboardingState) -> None:
-        data = json.dumps(asdict(state), ensure_ascii=False)
         decision = state.decision.value if state.decision else None
         with closing(sqlite3.connect(self._path)) as db, db:
             db.execute("INSERT OR REPLACE INTO onboarding VALUES (?, ?, ?, ?)",
-                       (state.id, state.created_at, decision, data))
+                       (state.id, state.created_at, decision, state_to_json(state)))
 
     def get(self, onboarding_id: str) -> OnboardingState | None:
         with closing(sqlite3.connect(self._path)) as db:
             row = db.execute("SELECT data FROM onboarding WHERE id = ?",
                              (onboarding_id,)).fetchone()
-        return _from_dict(json.loads(row[0])) if row else None
-
-
-def _from_dict(d: dict) -> OnboardingState:
-    return OnboardingState(
-        prospect=Prospect(**d["prospect"]),
-        id=d["id"],
-        created_at=d["created_at"],
-        context=d["context"],
-        steps=[StepResult(**{**s, "status": StepStatus(s["status"])}) for s in d["steps"]],
-        decision=Decision(d["decision"]) if d["decision"] else None,
-        message=d["message"],
-    )
+        return state_from_dict(json.loads(row[0])) if row else None
